@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "806745033019",
+    "project_id": "pengingatkuliah",
+    "storage_bucket": "pengingatkuliah.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806745033019:android:4f3a18b5eb676687648f1e",
+        "android_client_info": {
+          "package_name": "com.example.pengingat_kuliah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoj5uBlwfHMkJk5ut6-50J3eTIDiNSHt4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
