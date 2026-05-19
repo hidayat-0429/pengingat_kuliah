@@ -35,6 +35,12 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(settings);
 
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.requestNotificationsPermission();
+
   runApp(const AplikasiSaya());
 }
 
@@ -79,6 +85,12 @@ class _HalamanUtamaState extends State<HalamanUtama> {
   String namaUser = '';
 
   Future<void> initFCM() async {
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     final token = await FirebaseMessaging.instance.getToken();
 
     if (token == null) return;
@@ -422,7 +434,7 @@ class _HalamanUtamaState extends State<HalamanUtama> {
                                 child: Text(
                                   '⚠️ Deadline Mendekat',
                                   style: TextStyle(
-                                    color: Colors.red,
+                                    color: Colors.redAccent,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -441,6 +453,9 @@ class _HalamanUtamaState extends State<HalamanUtama> {
               ),
 
         floatingActionButton: FloatingActionButton.extended(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           backgroundColor: const Color(0xff4f46e5),
           elevation: 8,
 
