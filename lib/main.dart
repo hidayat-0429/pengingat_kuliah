@@ -11,14 +11,32 @@ import 'splash_page.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {}
+Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
 
-void main() async {
+  RemoteNotification? notification = message.notification;
+
+  if (notification != null) {
+    await flutterLocalNotificationsPlugin.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'channel_id',
+          'Reminder',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
 
   await Supabase.initialize(
     url: 'https://kwvmkciknxkxzqkchzra.supabase.co',
@@ -40,6 +58,30 @@ void main() async {
         AndroidFlutterLocalNotificationsPlugin
       >()
       ?.requestNotificationsPermission();
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseBackgroundHandler);
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    print("NOTIF MASUK");
+
+    RemoteNotification? notification = message.notification;
+
+    if (notification != null) {
+      await flutterLocalNotificationsPlugin.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'channel_id',
+            'Reminder',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    }
+  });
 
   runApp(const AplikasiSaya());
 }
@@ -85,20 +127,39 @@ class _HalamanUtamaState extends State<HalamanUtama> {
   String namaUser = '';
 
   Future<void> initFCM() async {
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    final token = await FirebaseMessaging.instance.getToken();
+      final token = await FirebaseMessaging.instance.getToken();
 
-    if (token == null) return;
+      print("TOKEN FCM:");
+      print(token);
 
-    await supabase.from('device').upsert({
-      'user_id': supabase.auth.currentUser!.id,
-      'fcm_token': token,
-    });
+      final user = supabase.auth.currentUser;
+
+      print("USER:");
+      print(user?.id);
+
+      if (token == null || user == null) {
+        print("TOKEN ATAU USER NULL");
+        return;
+      }
+
+      final result = await supabase.from('device').upsert({
+        'user_id': user.id,
+        'fcm_token': token,
+      });
+
+      print("BERHASIL SIMPAN TOKEN");
+      print(result);
+    } catch (e) {
+      print("ERROR FCM:");
+      print(e);
+    }
   }
 
   Future<void> ambilNamaUser() async {
@@ -118,17 +179,22 @@ class _HalamanUtamaState extends State<HalamanUtama> {
           namaUser = data['nama'] ?? '';
         });
       }
-    } catch (e) {
-      debugPrint(e.toString());
+    } catch (e, stackTrace) {
+      print("ERROR FCM:");
+      print(e);
+      print(stackTrace);
     }
   }
 
   @override
   void initState() {
     super.initState();
-    ambilData();
-    initFCM();
-    ambilNamaUser();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ambilData();
+      await ambilNamaUser();
+      await initFCM();
+    });
   }
 
   Future<void> ambilData() async {
@@ -245,13 +311,14 @@ class _HalamanUtamaState extends State<HalamanUtama> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xfff8fafc), Color(0xffffffff)],
+          colors: [Color(0xfff5f7ff), Color(0xffffffff)],
         ),
       ),
 
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
+          toolbarHeight: 85,
           elevation: 0,
           backgroundColor: Colors.transparent,
 
@@ -263,22 +330,28 @@ class _HalamanUtamaState extends State<HalamanUtama> {
             ),
           ),
 
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Pengingat Tugas',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+          title: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Pengingat Tugas',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
 
-              Text('Halo, $namaUser 👋', style: const TextStyle(fontSize: 13)),
-            ],
+                Text(
+                  'Halo, $namaUser 👋',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
           ),
-
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 10),
               child: CircleAvatar(
+                radius: 22,
                 backgroundColor: Colors.white,
                 child: IconButton(
                   icon: const Icon(Icons.person, color: Color(0xff4f46e5)),
@@ -330,15 +403,18 @@ class _HalamanUtamaState extends State<HalamanUtama> {
                 itemBuilder: (context, index) {
                   final item = daftarTugas[index];
 
-                  final mendekati =
-                      item.tenggat.difference(DateTime.now()).inHours <= 24;
+                  final sisaJam = item.tenggat
+                      .difference(DateTime.now())
+                      .inHours;
+
+                  final mendekati = sisaJam >= 0 && sisaJam <= 24;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 15),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade200),
                       borderRadius: BorderRadius.circular(20),
-                      color: Colors.white,
+                      color: const Color(0xfffcfcff),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
@@ -349,10 +425,13 @@ class _HalamanUtamaState extends State<HalamanUtama> {
                     ),
 
                     child: ListTile(
-                      contentPadding: const EdgeInsets.all(18),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 12,
+                      ),
 
                       leading: Transform.scale(
-                        scale: 1.2,
+                        scale: 1.0,
                         child: Checkbox(
                           value: item.selesai,
                           activeColor: const Color(0xff4f46e5),
@@ -378,7 +457,7 @@ class _HalamanUtamaState extends State<HalamanUtama> {
                         item.judulTugas,
                         style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                           color: Colors.black87,
                           decoration: item.selesai
                               ? TextDecoration.lineThrough
@@ -429,14 +508,33 @@ class _HalamanUtamaState extends State<HalamanUtama> {
                             ),
 
                             if (mendekati && !item.selesai)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 10),
-                                child: Text(
-                                  '⚠️ Deadline Mendekat',
-                                  style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              Container(
+                                margin: const EdgeInsets.only(top: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xfffff1f2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Color(0xffef4444),
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Deadline Mendekat',
+                                      style: TextStyle(
+                                        color: Color(0xffef4444),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                           ],
