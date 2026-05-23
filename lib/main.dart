@@ -543,7 +543,32 @@ class _HalamanUtamaState extends State<HalamanUtama> {
 
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.redAccent),
-                        onPressed: () => hapusTugas(index),
+                        onPressed: () async {
+                          final hasil = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Hapus Tugas'),
+                              content: const Text(
+                                'Apakah Anda yakin ingin menghapus tugas ini?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Batal'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('Hapus'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (hasil == true) {
+                            hapusTugas(index);
+                          }
+                        },
                       ),
                     ),
                   );
