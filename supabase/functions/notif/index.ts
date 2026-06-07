@@ -1,161 +1,98 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { JWT } from 'https://cdn.jsdelivr.net/npm/google-auth-library@9.0.0/build/src/index.js';
 
-// 🔥 CONVERT PEM → ARRAY BUFFER (FIX ASN.1 ERROR)
-function pemToArrayBuffer(pem: string) {
-  const base64 = pem
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\n/g, "");
+import serviceAccount from '../service-account.json' assert { type: 'json' };
 
-  const binary = atob(base64);
-  const buffer = new Uint8Array(binary.length);
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-  for (let i = 0; i < binary.length; i++) {
-    buffer[i] = binary.charCodeAt(i);
-  }
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  return buffer.buffer;
-}
-
-// 🔥 GET ACCESS TOKEN (FCM V1)
 async function getAccessToken() {
-  const b64 = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_B64")!;
-  const sa = JSON.parse(atob(b64));
-
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { alg: "RS256", typ: "JWT" };
-  const payload = {
-    iss: sa.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  function base64url(obj: any) {
-    return btoa(JSON.stringify(obj))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-  }
-
-  const unsigned = `${base64url(header)}.${base64url(payload)}`;
-
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToArrayBuffer(sa.private_key),
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    new TextEncoder().encode(unsigned)
-  );
-
-  const sig = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-
-  const jwt = `${unsigned}.${sig}`;
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
+  const jwtClient = new JWT({
+    email: serviceAccount.client_email,
+    key: serviceAccount.private_key,
+    scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
   });
-
-  const data = await res.json();
-
-  if (!data.access_token) {
-    throw new Error(JSON.stringify(data));
-  }
-
-  return data.access_token;
+  const tokens = await jwtClient.authorize();
+  return tokens.access_token;
 }
 
-// 🔥 MAIN FUNCTION
-serve(async () => {
+serve(async (req) => {
   try {
-    const url = "https://kwvmkciknxkxzqkchzra.supabase.co";
-    const key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3dm1rY2lrbnhreHpxa2NoenJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzE2MjQsImV4cCI6MjA5MjU0NzYyNH0.sRkWvne-zkRqgtufLj8KLG82ciCGMGLE3vp0WkOAiwQ"; // 🔥 GANTI INI
-    const projectId = "pengingatkuliah";
+    const { data: tugasTelat, error: errTugas } = await supabase
+      .from('tugas')
+      .select('id, judul, mata_kuliah, user_id, tenggat, notified')
+      .eq('selesai', false)
+      .eq('notified', false)
+      .lte('tenggat', new Date().toISOString());
 
-    const token = await getAccessToken();
+    if (errTugas) throw errTugas;
 
-    const now = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString();
-    // ambil tugas yang sudah lewat
-    const tugasRes = await fetch(
-  `${url}/rest/v1/tugas?tenggat=lte.${now}&selesai=eq.false&notified=eq.false`,
-  {
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-    },
-  }
-);
+    if (!tugasTelat || tugasTelat.length === 0) {
+      return new Response(JSON.stringify({ message: 'Tidak ada tugas baru yang lewat deadline.' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
 
-    const tugasData = await tugasRes.json();
-const tugas = Array.isArray(tugasData) ? tugasData : [];
+    const accessToken = await getAccessToken();
+    let sentCount = 0;
 
-    // ambil semua device
-    const deviceRes = await fetch(`${url}/rest/v1/device`, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-      },
-    });
+    for (const tugas of tugasTelat) {
+      const { data: devices, error: errDevice } = await supabase
+        .from('device')
+        .select('fcm_token')
+        .eq('user_id', tugas.user_id);
 
-    const deviceData = await deviceRes.json();
-const devices = Array.isArray(deviceData) ? deviceData : [];
+      if (errDevice || !devices || devices.length === 0) continue;
 
-    // kirim notif
-    for (const t of tugas) {
-      for (const d of devices) {
-        await fetch(
-          `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              message: {
-                token: d.fcm_token,
-                notification: {
-                  title: "Deadline Tugas",
-                  body: `${t.judul} (${t.mata_kuliah})`,
-                },
-              },
-            }),
-          }
-        );
+      const fcmToken = devices[0].fcm_token;
+
+      const fcmPayload = {
+        message: {
+          token: fcmToken,
+          notification: {
+            title: '⚠️ Tugas Terlambat!',
+            body: `Tugas ${tugas.judul} (${tugas.mata_kuliah}) sudah lewat deadline. Segera kerjakan!`,
+          },
+        },
+      };
+
+      const resp = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(fcmPayload),
+      });
+
+      if (resp.ok) {
+        // BUG FIX: Patch notified=true per tugas, bukan di luar loop
+        await supabase
+          .from('tugas')
+          .update({ notified: true })
+          .eq('id', tugas.id);
+        sentCount++;
+      } else {
+        console.error(`FCM failed for tugas ${tugas.id}:`, await resp.text());
       }
     }
-await fetch(`${url}/rest/v1/tugas?id=eq.${t.id}`, {
-  method: "PATCH",
-  headers: {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    notified: true,
-  }),
-});
-    return new Response(JSON.stringify({ tugas, devices }));
-  } catch (e) {
-    return new Response("ERROR: " + e.message);
+
+    return new Response(
+      JSON.stringify({ message: `Berhasil kirim notif ke ${sentCount} tugas.` }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
+
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 500,
+    });
   }
-});
+})
