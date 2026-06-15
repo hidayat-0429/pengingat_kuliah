@@ -54,8 +54,8 @@ class _EmptyStateState extends State<EmptyState>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.08),
-                      AppColors.accent.withOpacity(0.04),
+                      AppColors.primary.withValues(alpha: 0.08),
+                      AppColors.accent.withValues(alpha: 0.04),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -67,13 +67,13 @@ class _EmptyStateState extends State<EmptyState>
                       ? Icons.filter_list_off_rounded
                       : Icons.assignment_turned_in_outlined,
                   size: 56,
-                  color: AppColors.primary.withOpacity(0.4),
+                  color: AppColors.primary.withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(height: 24),
               Text(
                 isFilter
-                    ? 'Tidak ada tugas "${ widget.filterLabel}"'
+                    ? 'Tidak ada tugas "${widget.filterLabel}"'
                     : 'Belum Ada Tugas',
                 style: const TextStyle(
                   fontSize: 18,

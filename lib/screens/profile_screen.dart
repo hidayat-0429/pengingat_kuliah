@@ -25,9 +25,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final user = AuthService.currentUser;
     if (user == null) return;
-    
+
     final n = await AuthService.getNamaUser();
-    
+
     if (mounted) {
       setState(() {
         nama = n;
@@ -58,9 +58,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
           child: isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
               : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
                   child: Column(
                     children: [
                       Hero(
@@ -72,16 +77,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             gradient: AppColors.primaryGradient,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
+                                color: AppColors.primary.withValues(alpha: 0.3),
                                 blurRadius: 24,
                                 offset: const Offset(0, 8),
                               ),
                             ],
                           ),
-                          child: CircleAvatar(
+                          child: const CircleAvatar(
                             radius: 54,
                             backgroundColor: AppColors.bgSecondary,
-                            child: const Icon(
+                            child: Icon(
                               Icons.person_rounded,
                               color: Colors.white,
                               size: 60,
@@ -117,7 +122,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Versi Aplikasi',
                               trailing: 'v2.0.0 (Pro)',
                             ),
-                            Divider(color: AppColors.glassBorder, height: 1),
+                            const Divider(
+                              color: AppColors.glassBorder,
+                              height: 1,
+                            ),
                             _buildListTile(
                               icon: Icons.shield_outlined,
                               title: 'Kebijakan Privasi',
@@ -133,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: AppColors.danger.withOpacity(0.5),
+                              color: AppColors.danger.withValues(alpha: 0.5),
                               width: 1.5,
                             ),
                             foregroundColor: AppColors.danger,
@@ -147,7 +155,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()),
+                                builder: (_) => const LoginScreen(),
+                              ),
                               (route) => false,
                             );
                           },
@@ -155,7 +164,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           label: const Text(
                             'Keluar dari Akun',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -178,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.15),
+          color: AppColors.primary.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: AppColors.primary, size: 22),
@@ -201,8 +212,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             )
           : (isLink
-              ? const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted)
-              : null),
+                ? const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                  )
+                : null),
       onTap: isLink ? () {} : null,
     );
   }

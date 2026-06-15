@@ -23,10 +23,12 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
   @override
   void initState() {
     super.initState();
-    _matkulCtrl =
-        TextEditingController(text: widget.tugasToEdit?.mataKuliah ?? '');
-    _judulCtrl =
-        TextEditingController(text: widget.tugasToEdit?.judulTugas ?? '');
+    _matkulCtrl = TextEditingController(
+      text: widget.tugasToEdit?.mataKuliah ?? '',
+    );
+    _judulCtrl = TextEditingController(
+      text: widget.tugasToEdit?.judulTugas ?? '',
+    );
     if (widget.tugasToEdit != null) {
       _tanggal = widget.tugasToEdit!.tenggat;
       _jam = TimeOfDay(
@@ -53,8 +55,9 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
           content: const Text('Semua bidang wajib diisi!'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.danger,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -87,7 +90,8 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
       ),
       child: Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom +
+          bottom:
+              MediaQuery.of(context).viewInsets.bottom +
               MediaQuery.of(context).padding.bottom +
               24,
           left: 24,
@@ -105,7 +109,7 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: AppColors.textMuted.withOpacity(0.3),
+                  color: AppColors.textMuted.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -146,8 +150,7 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
             const SizedBox(height: 24),
             _buildField(_matkulCtrl, 'Mata Kuliah', Icons.book_outlined),
             const SizedBox(height: 14),
-            _buildField(
-                _judulCtrl, 'Judul Tugas', Icons.edit_note_outlined),
+            _buildField(_judulCtrl, 'Judul Tugas', Icons.edit_note_outlined),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -168,8 +171,7 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
     );
   }
 
-  Widget _buildField(
-      TextEditingController ctrl, String label, IconData icon) {
+  Widget _buildField(TextEditingController ctrl, String label, IconData icon) {
     return TextField(
       controller: ctrl,
       style: const TextStyle(color: Colors.white),
@@ -185,8 +187,7 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: AppColors.primary, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );
@@ -198,12 +199,13 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         side: const BorderSide(color: AppColors.glassBorder),
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: const Icon(Icons.calendar_month_outlined,
-          size: 18, color: AppColors.primary),
+      icon: const Icon(
+        Icons.calendar_month_outlined,
+        size: 18,
+        color: AppColors.primary,
+      ),
       label: Text(
         _tanggal == null
             ? 'Tanggal'
@@ -237,12 +239,13 @@ class _AddTugasSheetState extends State<AddTugasSheet> {
         padding: const EdgeInsets.symmetric(vertical: 14),
         side: const BorderSide(color: AppColors.glassBorder),
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: const Icon(Icons.access_time_outlined,
-          size: 18, color: AppColors.primary),
+      icon: const Icon(
+        Icons.access_time_outlined,
+        size: 18,
+        color: AppColors.primary,
+      ),
       label: Text(
         _jam == null ? 'Jam' : _jam!.format(context),
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),

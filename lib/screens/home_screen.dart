@@ -57,10 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Tugas> get _filteredTugas {
-    if (_filter == 'Aktif') return _daftarTugas.where((t) => !t.selesai && !t.terlambat).toList();
-    if (_filter == 'Selesai') return _daftarTugas.where((t) => t.selesai).toList();
-    if (_filter == 'Terlambat') return _daftarTugas.where((t) => t.terlambat).toList();
-    return _daftarTugas; // 'Semua'
+    if (_filter == 'Aktif') {
+      return _daftarTugas.where((t) => !t.selesai && !t.terlambat).toList();
+    }
+    if (_filter == 'Selesai') {
+      return _daftarTugas.where((t) => t.selesai).toList();
+    }
+    if (_filter == 'Terlambat') {
+      return _daftarTugas.where((t) => t.terlambat).toList();
+    }
+    return _daftarTugas;
   }
 
   void _showError(String message) {
@@ -102,9 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
         await _fetchTugas();
         // Jadwalkan notif untuk data baru
         if (tugas == null) {
-          final newTugas = _daftarTugas.firstWhere((t) =>
-              t.judulTugas == result['judul'] &&
-              t.mataKuliah == result['mataKuliah']);
+          final newTugas = _daftarTugas.firstWhere(
+            (t) =>
+                t.judulTugas == result['judul'] &&
+                t.mataKuliah == result['mataKuliah'],
+          );
           await NotificationService.scheduleForTugas(newTugas);
         }
       } catch (e) {
@@ -120,17 +128,28 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgSecondary,
-        title: const Text('Hapus Tugas?', style: TextStyle(color: Colors.white)),
-        content: const Text('Tugas yang dihapus tidak dapat dikembalikan.',
-            style: TextStyle(color: AppColors.textSecondary)),
+        title: const Text(
+          'Hapus Tugas?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Tugas yang dihapus tidak dapat dikembalikan.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -155,12 +174,15 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         final index = _daftarTugas.indexWhere((t) => t.id == tugas.id);
         if (index != -1) {
-          _daftarTugas[index] = _daftarTugas[index].copyWith(selesai: !oldState);
+          _daftarTugas[index] = _daftarTugas[index].copyWith(
+            selesai: !oldState,
+          );
         }
       });
       await TugasService.toggleSelesai(tugas.id, !oldState);
-      
+
       if (!oldState) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -172,9 +194,13 @@ class _HomeScreenState extends State<HomeScreen> {
               textColor: Colors.white,
               onPressed: () async {
                 setState(() {
-                  final index = _daftarTugas.indexWhere((t) => t.id == tugas.id);
+                  final index = _daftarTugas.indexWhere(
+                    (t) => t.id == tugas.id,
+                  );
                   if (index != -1) {
-                    _daftarTugas[index] = _daftarTugas[index].copyWith(selesai: oldState);
+                    _daftarTugas[index] = _daftarTugas[index].copyWith(
+                      selesai: oldState,
+                    );
                   }
                 });
                 await TugasService.toggleSelesai(tugas.id, oldState);
@@ -191,16 +217,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final aktifCount = _daftarTugas.where((t) => !t.selesai && !t.terlambat).length;
+    final aktifCount = _daftarTugas
+        .where((t) => !t.selesai && !t.terlambat)
+        .length;
     final selesaiCount = _daftarTugas.where((t) => t.selesai).length;
     final telatCount = _daftarTugas.where((t) => t.terlambat).length;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.backgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -238,7 +264,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (_) => const ProfileScreen()),
+                            builder: (_) => const ProfileScreen(),
+                          ),
                         );
                         _initData(); // Refresh nama user & tugas jika berubah
                       },
@@ -249,11 +276,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: AppColors.primaryGradient,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          child: CircleAvatar(
+                          child: const CircleAvatar(
                             radius: 22,
                             backgroundColor: AppColors.bgSecondary,
-                            child: const Icon(
+                            child: Icon(
                               Icons.person_rounded,
                               color: Colors.white,
                               size: 24,
@@ -268,7 +302,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Stats
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Row(
                   children: [
                     _buildStatItem('Aktif', aktifCount, AppColors.primary),
@@ -287,34 +324,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: ['Semua', 'Aktif', 'Selesai', 'Terlambat']
-                      .map((f) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: ChoiceChip(
-                              label: Text(f),
-                              selected: _filter == f,
-                              onSelected: (val) {
-                                if (val) setState(() => _filter = f);
-                              },
-                              backgroundColor: AppColors.bgSecondary,
-                              selectedColor: AppColors.primary.withOpacity(0.2),
-                              labelStyle: TextStyle(
-                                color: _filter == f
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                                fontWeight: _filter == f
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                              side: BorderSide(
-                                color: _filter == f
-                                    ? AppColors.primary
-                                    : AppColors.glassBorder,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                      .map(
+                        (f) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ChoiceChip(
+                            label: Text(f),
+                            selected: _filter == f,
+                            onSelected: (val) {
+                              if (val) setState(() => _filter = f);
+                            },
+                            backgroundColor: AppColors.bgSecondary,
+                            selectedColor: AppColors.primary.withValues(
+                              alpha: 0.2,
                             ),
-                          ))
+                            labelStyle: TextStyle(
+                              color: _filter == f
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
+                              fontWeight: _filter == f
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            side: BorderSide(
+                              color: _filter == f
+                                  ? AppColors.primary
+                                  : AppColors.glassBorder,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -324,7 +365,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.primary))
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      )
                     : RefreshIndicator(
                         onRefresh: _fetchTugas,
                         color: AppColors.primary,
@@ -333,15 +377,24 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? ListView(
                                 children: [
                                   SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.5,
+                                    height:
+                                        MediaQuery.of(context).size.height *
+                                        0.5,
                                     child: EmptyState(
-                                        filterLabel:
-                                            _filter == 'Semua' ? null : _filter),
+                                      filterLabel: _filter == 'Semua'
+                                          ? null
+                                          : _filter,
+                                    ),
                                   ),
                                 ],
                               )
                             : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  10,
+                                  20,
+                                  80,
+                                ),
                                 itemCount: _filteredTugas.length,
                                 itemBuilder: (context, index) {
                                   final item = _filteredTugas[index];
@@ -365,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
+              color: AppColors.primary.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -375,7 +428,9 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           icon: const Icon(Icons.add_rounded, size: 24),
           label: const Text(
             'Tugas Baru',
@@ -392,9 +447,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
         ),
         child: Column(
           children: [
@@ -411,7 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w500,
               ),
             ),

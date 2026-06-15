@@ -69,24 +69,25 @@ class TugasCard extends StatelessWidget {
                 color: tugas.selesai ? const Color(0xFF0D0D1A) : null,
                 border: Border.all(
                   color: tugas.terlambat
-                      ? AppColors.danger.withOpacity(0.35)
+                      ? AppColors.danger.withValues(alpha: 0.35)
                       : tugas.mendekati
-                          ? AppColors.warning.withOpacity(0.25)
-                          : AppColors.glassBorder,
+                      ? AppColors.warning.withValues(alpha: 0.25)
+                      : AppColors.glassBorder,
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                   if (isUrgent && !tugas.selesai)
                     BoxShadow(
-                      color: (tugas.terlambat
-                              ? AppColors.danger
-                              : AppColors.warning)
-                          .withOpacity(0.08),
+                      color:
+                          (tugas.terlambat
+                                  ? AppColors.danger
+                                  : AppColors.warning)
+                              .withValues(alpha: 0.08),
                       blurRadius: 20,
                       spreadRadius: -2,
                     ),
@@ -136,7 +137,7 @@ class TugasCard extends StatelessWidget {
                               Icon(
                                 Icons.book_outlined,
                                 size: 14,
-                                color: AppColors.primary.withOpacity(0.6),
+                                color: AppColors.primary.withValues(alpha: 0.6),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
@@ -168,12 +169,11 @@ class TugasCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: _deadlineColor,
-                                  fontWeight:
-                                      isUrgent ? FontWeight.w600 : null,
+                                  fontWeight: isUrgent ? FontWeight.w600 : null,
                                 ),
                               ),
                               if (!tugas.selesai) ...[
-                                Text(
+                                const Text(
                                   '  ·  ',
                                   style: TextStyle(color: AppColors.textMuted),
                                 ),
@@ -237,9 +237,9 @@ class TugasCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.25), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
       ),
       child: Text(
         text,
