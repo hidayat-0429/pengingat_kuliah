@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
@@ -27,15 +28,24 @@ class NotificationService {
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
     // Local notifications
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const settings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(settings);
 
-    await _plugin
+    final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    final notifGranted = await androidImpl?.requestNotificationsPermission();
+    debugPrint('[Notif] Izin notifikasi: $notifGranted');
+
+    // Izin exact alarm terpisah dari izin notifikasi biasa (Android 12+).
+    // Tanpa ini, zonedSchedule dengan mode exact akan gagal di beberapa device.
+    final exactAlarmGranted = await androidImpl?.requestExactAlarmsPermission();
+    debugPrint('[Notif] Izin exact alarm: $exactAlarmGranted');
 
     // Firebase messaging
     FirebaseMessaging.onBackgroundMessage(_backgroundHandler);
@@ -66,18 +76,34 @@ class NotificationService {
       tugas.tenggat.minute,
     );
 
-    if (jadwal.isBefore(tz.TZDateTime.now(tz.local))) return;
+    final now = tz.TZDateTime.now(tz.local);
+    debugPrint('[Notif] Jadwal: $jadwal | Sekarang: $now');
 
-    await _plugin.zonedSchedule(
-      tugas.id,
-      'Deadline Tugas 📚',
-      '${tugas.judulTugas} — ${tugas.mataKuliah}',
-      jadwal,
-      _notifDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+    if (jadwal.isBefore(now)) {
+      debugPrint('[Notif] Dibatalkan: tenggat sudah lewat, tidak dijadwalkan.');
+      return;
+    }
+
+    try {
+      await _plugin.zonedSchedule(
+        tugas.id,
+        'Deadline Tugas ðŸ“š',
+        '${tugas.judulTugas} â€” ${tugas.mataKuliah}',
+        jadwal,
+        _notifDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      debugPrint('[Notif] Berhasil dijadwalkan untuk id=${tugas.id}');
+    } catch (e) {
+      debugPrint('[Notif] Gagal menjadwalkan: $e');
+      rethrow;
+    }
+  }
+
+  static Future<void> cancelForTugas(int id) async {
+    await _plugin.cancel(id);
   }
 
   static Future<void> initFCM() async {
@@ -96,7 +122,7 @@ class NotificationService {
         'fcm_token': token,
       });
     } catch (_) {
-      // FCM registration gagal — silent fail
+      // FCM registration gagal â€” silent fail
     }
   }
 }
