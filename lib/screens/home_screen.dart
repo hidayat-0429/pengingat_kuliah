@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
         await _fetchTugas();
-        // Jadwalkan notif untuk data baru
+        // Jadwalkan notif untuk data baru atau update
         if (tugas == null) {
           final newTugas = _daftarTugas.firstWhere(
             (t) =>
@@ -114,6 +114,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 t.mataKuliah == result['mataKuliah'],
           );
           await NotificationService.scheduleForTugas(newTugas);
+        } else {
+          final updatedTugas = _daftarTugas.firstWhere((t) => t.id == tugas.id);
+          await NotificationService.scheduleForTugas(updatedTugas);
         }
       } catch (e) {
         _showError('Gagal menyimpan tugas');
@@ -159,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _isLoading = true);
       try {
         await TugasService.delete(tugas.id);
+        await NotificationService.cancelForTugas(tugas.id);
         await _fetchTugas();
       } catch (e) {
         _showError('Gagal menghapus tugas');
@@ -182,6 +186,8 @@ class _HomeScreenState extends State<HomeScreen> {
       await TugasService.toggleSelesai(tugas.id, !oldState);
 
       if (!oldState) {
+        // if it became selesai, cancel notification
+        await NotificationService.cancelForTugas(tugas.id);
         if (!mounted) return;
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,10 +210,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 });
                 await TugasService.toggleSelesai(tugas.id, oldState);
+                final updatedTugas = _daftarTugas.firstWhere((t) => t.id == tugas.id);
+                await NotificationService.scheduleForTugas(updatedTugas);
               },
             ),
           ),
         );
+      } else {
+        // if it became un-selesai, reschedule notification
+        final updatedTugas = _daftarTugas.firstWhere((t) => t.id == tugas.id);
+        await NotificationService.scheduleForTugas(updatedTugas);
       }
     } catch (e) {
       _showError('Gagal mengubah status tugas');

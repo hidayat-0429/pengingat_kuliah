@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { JWT } from 'https://cdn.jsdelivr.net/npm/google-auth-library@9.0.0/build/src/index.js';
 
 import serviceAccount from '../service-account.json' assert { type: 'json' };
 
@@ -9,14 +8,64 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function getAccessToken() {
-  const jwtClient = new JWT({
-    email: serviceAccount.client_email,
-    key: serviceAccount.private_key,
-    scopes: ['https://www.googleapis.com/auth/firebase.messaging'],
+// ── Ganti google-auth-library (gagal diimport dari CDN) dengan ──────────
+// implementasi manual pakai Web Crypto API yang built-in di Deno.
+// Ini menggantikan fungsi jwtClient.authorize() sebelumnya.
+
+async function getAccessToken(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claimSet = {
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const base64url = (input: string) =>
+    btoa(input).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  const unsignedToken = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(claimSet))}`;
+
+  const pem = serviceAccount.private_key
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+  const binaryKey = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(unsignedToken),
+  );
+
+  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=+$/, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  const jwt = `${unsignedToken}.${encodedSignature}`;
+
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   });
-  const tokens = await jwtClient.authorize();
-  return tokens.access_token;
+
+  const tokenJson = await tokenRes.json();
+  if (!tokenJson.access_token) {
+    throw new Error(`Gagal ambil access token: ${JSON.stringify(tokenJson)}`);
+  }
+  return tokenJson.access_token;
 }
 
 serve(async (req) => {
@@ -70,7 +119,6 @@ serve(async (req) => {
       });
 
       if (resp.ok) {
-        // BUG FIX: Patch notified=true per tugas, bukan di luar loop
         await supabase
           .from('tugas')
           .update({ notified: true })

@@ -67,14 +67,7 @@ class NotificationService {
   }
 
   static Future<void> scheduleForTugas(Tugas tugas) async {
-    final jadwal = tz.TZDateTime(
-      tz.local,
-      tugas.tenggat.year,
-      tugas.tenggat.month,
-      tugas.tenggat.day,
-      tugas.tenggat.hour,
-      tugas.tenggat.minute,
-    );
+    final jadwal = tz.TZDateTime.from(tugas.tenggat, tz.local);
 
     final now = tz.TZDateTime.now(tz.local);
     debugPrint('[Notif] Jadwal: $jadwal | Sekarang: $now');
